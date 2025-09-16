@@ -156,6 +156,5 @@ A story is considered done when:
 ## 🚀 Repository Access
 **GitHub:** https://github.com/elouanlecorgne/DoD 
 **Team:** Elouan Lecorgne  
-**Tutors Access:** Provided via GitHub repository link
 
 ---
