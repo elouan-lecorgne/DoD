@@ -15,19 +15,19 @@ func SeedDatabase(db *gorm.DB) {
 	// Create test users
 	users := []models.User{
 		{
-			Username: "alice",
-			Email:    "alice@example.com",
-			Password: hashPassword("password123"),
+			Username: "elouan",
+			Email:    "elouan@example.com",
+			Password: hashPassword("elouan123"),
 		},
 		{
-			Username: "bob",
-			Email:    "bob@example.com",
-			Password: hashPassword("password123"),
+			Username: "erell",
+			Email:    "erell@example.com",
+			Password: hashPassword("erell123"),
 		},
 		{
-			Username: "charlie",
-			Email:    "charlie@example.com",
-			Password: hashPassword("password123"),
+			Username: "anaelle",
+			Email:    "anaelle@example.com",
+			Password: hashPassword("anaelle123"),
 		},
 	}
 
