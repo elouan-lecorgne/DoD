@@ -76,12 +76,13 @@ cd dod-project
 
 ### 2. Environment Configuration
 
-#### Backend Environment
-```bash
-cd backend
-```
+Environment configuration files are included in the repository:
+- `backend/.env` - Backend configuration (database, JWT, port)
+- `frontend/.env` - Frontend configuration (API URL, application name)
 
-Create `.env` file:
+**Review and modify values as needed** for your local environment:
+
+#### Backend (`backend/.env`)
 ```env
 DB_HOST=localhost
 DB_PORT=5432
@@ -93,12 +94,7 @@ PORT=8080
 GIN_MODE=debug
 ```
 
-#### Frontend Environment
-```bash
-cd frontend
-```
-
-Create `.env` file:
+#### Frontend (`frontend/.env`)
 ```env
 REACT_APP_API_URL=/api/v1
 REACT_APP_NAME=DoD Manager
@@ -221,6 +217,7 @@ dod-project/
 │   ├── models/              # Data models (User, Project, DoD)
 │   ├── routes/              # Route definitions
 │   ├── tests/               # Backend tests
+│   ├── .env                 # Environment variables
 │   └── Dockerfile           # Backend container
 ├── frontend/
 │   ├── public/              # Static assets
@@ -230,6 +227,7 @@ dod-project/
 │   │   ├── pages/           # Page components (Login, Dashboard)
 │   │   ├── services/        # API services
 │   │   └── tests/           # Frontend tests
+│   ├── .env                 # Environment variables
 │   └── nginx.conf           # Nginx configuration
 ├── .github/
 │   └── workflows/
