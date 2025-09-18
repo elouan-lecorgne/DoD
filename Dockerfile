@@ -6,7 +6,6 @@ RUN npm ci && npm run build
 FROM nginx:alpine
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Configuration nginx basique
 RUN echo 'server { \
     listen 80; \
     root /usr/share/nginx/html; \

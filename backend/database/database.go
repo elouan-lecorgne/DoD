@@ -13,12 +13,10 @@ import (
 func Initialize(cfg *config.Config) *gorm.DB {
     var dsn string
     
-    // Priorité à DATABASE_URL (production/Render)
     databaseURL := os.Getenv("DATABASE_URL")
     if databaseURL != "" {
         dsn = databaseURL
     } else {
-        // Fallback pour développement local
         dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
             cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBName, cfg.DBPassword)
     }
@@ -30,7 +28,6 @@ func Initialize(cfg *config.Config) *gorm.DB {
     
     log.Println("Database connected successfully")
     
-    // Auto migrate les modèles
     err = db.AutoMigrate(
         &models.User{},
         &models.Project{},

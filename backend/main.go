@@ -13,36 +13,28 @@ import (
 )
 
 func main() {
-	// Charger les variables d'environnement
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
 
-	// Initialiser la configuration
 	cfg := config.Load()
 
-	// Initialiser la base de données
 	db := database.Initialize(cfg)
 	defer database.Close(db)
 
-	// Seed database if requested
 	if len(os.Args) > 1 && os.Args[1] == "seed" {
 		database.SeedDatabase(db)
 		return
 	}
 
-	// Configurer Gin
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Créer le routeur
 	r := gin.Default()
 
-	// Configurer les routes
 	routes.SetupRoutes(r, db)
 
-	// Démarrer le serveur
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

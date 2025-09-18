@@ -65,7 +65,6 @@ const ProjectDetail = () => {
     try {
       const response = await projectService.getProjectDoDs(id);
       setDods(response.data.dods || []);
-      // Note: We should also fetch project details separately in a real app
     } catch (err) {
       setError('Failed to fetch project data');
       console.error('Error fetching project data:', err);
@@ -108,7 +107,6 @@ const ProjectDetail = () => {
       await projectService.addParticipant(id, data.email, data.role);
       setParticipantDialogOpen(false);
       participantForm.reset();
-      // Note: Would need to refresh participant data in a real app
     } catch (err) {
       setError('Failed to add participant');
     }
