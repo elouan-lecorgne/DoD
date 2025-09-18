@@ -1,0 +1,90 @@
+version: '{build}'
+
+image: Ubuntu2004
+
+branches:
+  only:
+    - main
+    - develop
+
+environment:
+  GOVERSION: 1.19
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_USER: postgres
+  DB_PASSWORD: Password12!
+  DB_NAME: dod_test
+  JWT_SECRET: test-secret-key
+
+services:
+  - postgresql
+
+install:
+  # Install Go
+  - wget https://golang.org/dl/go1.19.linux-amd64.tar.gz
+  - sudo tar -C /usr/local -xzf go1.19.linux-amd64.tar.gz
+  - export PATH=$PATH:/usr/local/go/bin
+  - go version
+  
+  # Install Node.js
+  - curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+  - sudo apt-get install -y nodejs
+  - node --version
+  - npm --version
+
+before_build:
+  # Setup PostgreSQL
+  - sudo -u postgres createdb dod_test
+  - sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'Password12!';"
+  
+  # Install backend dependencies
+  - cd backend
+  - go mod download
+  - cd ..
+  
+  # Install frontend dependencies
+  - cd frontend
+  - npm ci
+  - cd ..
+
+build_script:
+  # Build backend
+  - cd backend
+  - go build -v ./...
+  - cd ..
+  
+  # Build frontend
+  - cd frontend
+  - npm run build
+  - cd ..
+
+test_script:
+  # Test backend
+  - cd backend
+  - go test ./... -v
+  - cd ..
+  
+  # Test frontend
+  - cd frontend
+  - npm test -- --coverage --watchAll=false
+  - cd ..
+
+deploy_script:
+  - ps: |
+      if ($env:APPVEYOR_REPO_BRANCH -eq "main") {
+        Write-Host "Deploying to production..."
+        # Add deployment commands here
+      } elseif ($env:APPVEYOR_REPO_BRANCH -eq "develop") {
+        Write-Host "Deploying to staging..."
+        # Add staging deployment commands here
+      }
+
+artifacts:
+  - path: frontend/build
+    name: frontend-build
+  - path: backend/main
+    name: backend-binary
+
+cache:
+  - frontend/node_modules
+  - '%USERPROFILE%\go\pkg\mod'

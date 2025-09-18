@@ -35,9 +35,10 @@ type ProjectParticipant struct {
 	ID        uint      `json:"id" gorm:"primary_key"`
 	ProjectID uint      `json:"project_id" gorm:"not null"`
 	UserID    uint      `json:"user_id" gorm:"not null"`
-	Role      string    `json:"role" gorm:"default:'member'"` 
+	Role      string    `json:"role" gorm:"default:'member'"` // owner, editor, viewer
 	CreatedAt time.Time `json:"created_at"`
 
+	// Relations
 	Project Project `json:"project" gorm:"foreignkey:ProjectID"`
 	User    User    `json:"user" gorm:"foreignkey:UserID"`
 }
@@ -52,6 +53,7 @@ type DoD struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
+	// Relations
 	Project Project   `json:"project" gorm:"foreignkey:ProjectID"`
 	Creator User      `json:"creator" gorm:"foreignkey:CreatedBy"`
 	Items   []DoDItem `json:"items" gorm:"foreignkey:DoDID"`
@@ -67,9 +69,11 @@ type DoDItem struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
+	// Relations
 	DoD DoD `json:"dod" gorm:"foreignkey:DoDID"`
 }
 
+// DTOs pour les requêtes
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`

@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
 
+console.log("API_BASE_URL:", process.env.REACT_APP_API_URL);
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api/v1';
+console.log("API_BASE_URL:", API_BASE_URL);
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -23,12 +25,14 @@ api.interceptors.request.use(
   }
 );
 
+// Response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
     if (error.response?.status === 401) {
+      // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

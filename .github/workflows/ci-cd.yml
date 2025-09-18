@@ -1,0 +1,75 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Test Backend
+      run: |
+        cd backend
+        go mod tidy
+        go test -v ./...
+    
+    - name: Test Frontend
+      run: |
+        cd frontend
+        npm ci
+        npm test -- --coverage --watchAll=false
+    
+    - name: Build Backend
+      run: |
+        cd backend
+        go build -v ./...
+    
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deploy Frontend
+      run: |
+        echo "Frontend deployed automatically by Render"
+        
+    - name: Deploy Backend  
+      run: |
+        echo "Backend deployed automatically by Render"

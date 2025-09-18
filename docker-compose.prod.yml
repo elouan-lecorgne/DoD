@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: ${DB_NAME:-dod_database}
+      POSTGRES_USER: ${DB_USER:-dod_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dod_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dod_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-dod_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dod_password}
+      DB_NAME: ${DB_NAME:-dod_database}
+      JWT_SECRET: ${JWT_SECRET:-your-production-jwt-secret}
+      GIN_MODE: release
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    #   - "443:443"
+    # volumes:
+    #   - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - dod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+
+networks:
+  dod-network:
+    driver: bridge
