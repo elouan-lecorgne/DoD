@@ -809,7 +809,7 @@ const ProjectDetail = () => {
             <FormControlLabel
               control={
                 <Checkbox
-                  checked={itemForm.watch('isRequired') !== false} // Par défaut true
+                  checked={itemForm.watch('isRequired') == true} // Par défaut true
                   onChange={(e) => itemForm.setValue('isRequired', e.target.checked)}
                 />
               }
