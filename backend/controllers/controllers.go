@@ -250,22 +250,13 @@ func (ctrl *Controller) GetProjectDoDs(c *gin.Context) {
 
 	var dods []models.DoD
 	err = ctrl.DB.Where("project_id = ?", projectID).
-		Preload("Items", func(db *gorm.DB) *gorm.DB {
-			return db.Order("\"order\" ASC, id ASC")
-		}).
+		Preload("Items").
 		Preload("Creator").
 		Find(&dods).Error
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch DoDs"})
 		return
-	}
-
-	// Ensure dod_id is set for all items (this is crucial for frontend)
-	for i := range dods {
-		for j := range dods[i].Items {
-			dods[i].Items[j].DoDID = dods[i].ID
-		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"dods": dods})
