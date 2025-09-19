@@ -250,13 +250,22 @@ func (ctrl *Controller) GetProjectDoDs(c *gin.Context) {
 
 	var dods []models.DoD
 	err = ctrl.DB.Where("project_id = ?", projectID).
-		Preload("Items").
+		Preload("Items", func(db *gorm.DB) *gorm.DB {
+			return db.Order("\"order\" ASC, id ASC")
+		}).
 		Preload("Creator").
 		Find(&dods).Error
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch DoDs"})
 		return
+	}
+
+	// Ensure dod_id is set for all items (this is crucial for frontend)
+	for i := range dods {
+		for j := range dods[i].Items {
+			dods[i].Items[j].DoDID = dods[i].ID
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"dods": dods})
@@ -557,13 +566,13 @@ func (ctrl *Controller) DeleteDoD(c *gin.Context) {
 }
 
 func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
-	dodID, err := strconv.Atoi(c.Param("id"))
+	dodID, err := strconv.Atoi(c.Param("id"))  // ← Changé de "dodId" à "id"
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
 		return
 	}
 
-	itemID, err := strconv.Atoi(c.Param("itemId"))
+	itemID, err := strconv.Atoi(c.Param("itemId"))  // ← Reste "itemId"
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
 		return
@@ -577,24 +586,25 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Récupérer l'item avec son DoD
+	// Vérifier que l'item existe et appartient au DoD
 	var item models.DoDItem
-	err = ctrl.DB.Preload("DoD").Where("id = ?", itemID).First(&item).Error
+	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
 		return
 	}
 
-	// Vérifier que l'item appartient bien au DoD demandé
-	if item.DoDID != uint(dodID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Item does not belong to this DoD"})
+	// Vérifier les permissions via le DoD
+	var dod models.DoD
+	err = ctrl.DB.First(&dod, dodID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
 		return
 	}
 
-	// Vérifier les permissions
 	var participant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
-		item.DoD.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
+		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
 	
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to edit this DoD item"})
@@ -631,26 +641,34 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		return
 	}
 
+	// AJOUTEZ CES LOGS
+	fmt.Printf("=== DELETE ITEM DEBUG ===\n")
+	fmt.Printf("DoD ID: %d, Item ID: %d\n", dodID, itemID)
+
 	userID := c.GetUint("user_id")
 
-	// Récupérer l'item avec son DoD
+	// Vérifier que l'item existe et appartient au DoD
 	var item models.DoDItem
-	err = ctrl.DB.Preload("DoD").Where("id = ?", itemID).First(&item).Error
+	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
 	if err != nil {
+		fmt.Printf("Item not found: %v\n", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
 		return
 	}
 
-	// Vérifier que l'item appartient bien au DoD demandé
-	if item.DoDID != uint(dodID) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Item does not belong to this DoD"})
+	fmt.Printf("Item found: %+v\n", item)
+
+	// Vérifier les permissions via le DoD
+	var dod models.DoD
+	err = ctrl.DB.First(&dod, dodID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
 		return
 	}
 
-	// Vérifier les permissions
 	var participant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
-		item.DoD.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
+		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
 	
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to delete this DoD item"})

@@ -197,51 +197,78 @@ const ProjectDetail = () => {
     }
   };
 
+  const handleDeleteItem = async () => {
+    if (!deleteItemDialog.item) return;
+  
+    console.log('=== DELETE ITEM DEBUG ===');
+    console.log('Item to delete:', deleteItemDialog.item);
+    
+    setDeletingItem(true);
+    try {
+      // Try to get dod_id from the item, or find it from the parent DoD
+      let dodId = deleteItemDialog.item.dod_id;
+      
+      if (!dodId) {
+        // Find the parent DoD that contains this item
+        const parentDod = dods.find(d => 
+          d.items && d.items.some(item => item.id === deleteItemDialog.item.id)
+        );
+        dodId = parentDod?.id;
+        console.log('Found parent DoD ID:', dodId);
+      }
+      
+      if (!dodId) {
+        throw new Error('Could not find parent DoD for this item');
+      }
+      
+      console.log('Using DoD ID:', dodId, 'Item ID:', deleteItemDialog.item.id);
+      
+      await dodService.deleteDoDItem(dodId, deleteItemDialog.item.id);
+      setDeleteItemDialog({ open: false, item: null });
+      fetchProjectData();
+      setError('');
+    } catch (err) {
+      console.error('Delete error:', err.response?.data || err);
+      setError('Failed to delete DoD item');
+    } finally {
+      setDeletingItem(false);
+    }
+  };
+  
+  // Also fix the handleEditItem function:
   const handleEditItem = async (data) => {
     try {
+      // Get the correct DoD ID
+      let dodId = editingItem.dod_id;
+      
+      if (!dodId) {
+        const parentDod = dods.find(d => 
+          d.items && d.items.some(item => item.id === editingItem.id)
+        );
+        dodId = parentDod?.id;
+      }
+      
+      if (!dodId) {
+        throw new Error('Could not find parent DoD for this item');
+      }
+      
       await dodService.updateDoDItem(
-        editingItem.dod_id,  
+        dodId,
         editingItem.id,      
         data.title,
         data.description,
         data.isRequired,
         data.order
       );
+      
       setEditItemDialogOpen(false);
       setEditingItem(null);
       editItemForm.reset();
       fetchProjectData();
       setError('');
     } catch (err) {
+      console.error('Update error:', err);
       setError('Failed to update DoD item');
-    }
-  };
-  const handleDeleteItem = async () => {
-    if (!deleteItemDialog.item) return;
-  
-    console.log('=== DELETE ITEM DEBUG ===');
-    console.log('Item to delete:', deleteItemDialog.item);
-    console.log('Item ID:', deleteItemDialog.item.id);
-    console.log('Item dod_id:', deleteItemDialog.item.dod_id);
-    console.log('Full DoDs state:', dods);
-    
-    // Trouvez le DoD parent
-    const parentDod = dods.find(d => d.items?.some(item => item.id === deleteItemDialog.item.id));
-    console.log('Parent DoD found:', parentDod);
-    console.log('Parent DoD ID:', parentDod?.id);
-  
-    setDeletingItem(true);
-    try {
-      const dodId = deleteItemDialog.item.dod_id || parentDod?.id;
-      console.log('Using DoD ID:', dodId, 'Item ID:', deleteItemDialog.item.id);
-      
-      await dodService.deleteDoDItem(dodId, deleteItemDialog.item.id);
-      // ... reste du code
-    } catch (err) {
-      console.error('Delete error:', err.response?.data || err);
-      setError('Failed to delete DoD item');
-    } finally {
-      setDeletingItem(false);
     }
   };
 
