@@ -85,16 +85,16 @@ export const dodService = {
       is_required: isRequired,
       order,
     }),
-  // CORRIGEZ ces deux fonctions :
+  // Routes corrigées pour correspondre au backend :
   updateDoDItem: (dodId, itemId, title, description, isRequired = true, order = 0) =>
-    api.put(`/dods/${dodId}/items/${itemId}`, {  // ← Route corrigée
+    api.put(`/dods/${dodId}/items/${itemId}`, {
       title,
       description,
       is_required: isRequired,
       order,
     }),
   deleteDoDItem: (dodId, itemId) =>
-    api.delete(`/dods/${dodId}/items/${itemId}`), // ← Route corrigée
+    api.delete(`/dods/${dodId}/items/${itemId}`),
 };
 
 export default api;

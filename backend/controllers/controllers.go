@@ -555,19 +555,19 @@ func (ctrl *Controller) DeleteDoD(c *gin.Context) {
 }
 
 func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
-	dodID, err := strconv.Atoi(c.Param("dodId"))
+	dodID, err := strconv.Atoi(c.Param("id"))  // ← Changé de "dodId" à "id"
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
 		return
 	}
 
-	itemID, err := strconv.Atoi(c.Param("itemId"))
+	itemID, err := strconv.Atoi(c.Param("itemId"))  // ← Reste "itemId"
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
 		return
 	}
 
-	var req models.UpdateDoDItemRequest 
+	var req models.UpdateDoDItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -618,13 +618,13 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 }
 
 func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
-	dodID, err := strconv.Atoi(c.Param("dodId"))
+	dodID, err := strconv.Atoi(c.Param("id"))  // ← Changé de "dodId" à "id"
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
 		return
 	}
 
-	itemID, err := strconv.Atoi(c.Param("itemId"))
+	itemID, err := strconv.Atoi(c.Param("itemId"))  // ← Reste "itemId"
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
 		return
