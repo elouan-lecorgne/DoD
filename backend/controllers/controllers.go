@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	
 
 	"dod-backend/config"
 	"dod-backend/middleware"
@@ -646,6 +648,7 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 	}
 
 	fmt.Printf("Item found: %+v\n", item)
+
 	// Vérifier les permissions via le DoD
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
