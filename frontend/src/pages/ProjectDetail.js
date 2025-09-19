@@ -219,16 +219,26 @@ const ProjectDetail = () => {
   const handleDeleteItem = async () => {
     if (!deleteItemDialog.item) return;
   
+    console.log('=== DELETE ITEM DEBUG ===');
+    console.log('Item to delete:', deleteItemDialog.item);
+    console.log('Item ID:', deleteItemDialog.item.id);
+    console.log('Item dod_id:', deleteItemDialog.item.dod_id);
+    console.log('Full DoDs state:', dods);
+    
+    // Trouvez le DoD parent
+    const parentDod = dods.find(d => d.items?.some(item => item.id === deleteItemDialog.item.id));
+    console.log('Parent DoD found:', parentDod);
+    console.log('Parent DoD ID:', parentDod?.id);
+  
     setDeletingItem(true);
     try {
-      await dodService.deleteDoDItem(
-        deleteItemDialog.item.dod_id,  
-        deleteItemDialog.item.id      
-      );
-      setDeleteItemDialog({ open: false, item: null });
-      fetchProjectData();
-      setError('');
+      const dodId = deleteItemDialog.item.dod_id || parentDod?.id;
+      console.log('Using DoD ID:', dodId, 'Item ID:', deleteItemDialog.item.id);
+      
+      await dodService.deleteDoDItem(dodId, deleteItemDialog.item.id);
+      // ... reste du code
     } catch (err) {
+      console.error('Delete error:', err.response?.data || err);
       setError('Failed to delete DoD item');
     } finally {
       setDeletingItem(false);

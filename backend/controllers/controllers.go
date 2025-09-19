@@ -618,17 +618,21 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 }
 
 func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
-	dodID, err := strconv.Atoi(c.Param("id"))  // ← Changé de "dodId" à "id"
+	dodID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
 		return
 	}
 
-	itemID, err := strconv.Atoi(c.Param("itemId"))  // ← Reste "itemId"
+	itemID, err := strconv.Atoi(c.Param("itemId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
 		return
 	}
+
+	// AJOUTEZ CES LOGS
+	fmt.Printf("=== DELETE ITEM DEBUG ===\n")
+	fmt.Printf("DoD ID: %d, Item ID: %d\n", dodID, itemID)
 
 	userID := c.GetUint("user_id")
 
@@ -636,10 +640,12 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 	var item models.DoDItem
 	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
 	if err != nil {
+		fmt.Printf("Item not found: %v\n", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
 		return
 	}
 
+	fmt.Printf("Item found: %+v\n", item)
 	// Vérifier les permissions via le DoD
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
