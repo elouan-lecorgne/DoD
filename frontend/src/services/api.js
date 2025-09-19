@@ -74,9 +74,9 @@ export const projectService = {
 export const dodService = {
   createDoD: (title, description, projectId) =>
     api.post('/dods/', { title, description, project_id: projectId }),
-  updateDoD: (dodId, title, description) =>                          // ← Nouvelle fonction
+  updateDoD: (dodId, title, description) =>
     api.put(`/dods/${dodId}`, { title, description }),
-  deleteDoD: (dodId) =>                                              // ← Nouvelle fonction
+  deleteDoD: (dodId) =>
     api.delete(`/dods/${dodId}`),
   addDoDItem: (dodId, title, description, isRequired = true, order = 0) =>
     api.post(`/dods/${dodId}/items`, {
@@ -85,15 +85,16 @@ export const dodService = {
       is_required: isRequired,
       order,
     }),
-  updateDoDItem: (itemId, title, description, isRequired = true, order = 0) =>  // ← Nouvelle fonction
-    api.put(`/dods/items/${itemId}`, {  // Note: structure simplifiée pour l'API
+  // CORRIGEZ ces deux fonctions :
+  updateDoDItem: (dodId, itemId, title, description, isRequired = true, order = 0) =>
+    api.put(`/dods/${dodId}/items/${itemId}`, {  // ← Route corrigée
       title,
       description,
       is_required: isRequired,
       order,
     }),
-  deleteDoDItem: (itemId) =>                                         // ← Nouvelle fonction
-    api.delete(`/dods/items/${itemId}`), // Note: structure simplifiée pour l'API
+  deleteDoDItem: (dodId, itemId) =>
+    api.delete(`/dods/${dodId}/items/${itemId}`), // ← Route corrigée
 };
 
 export default api;

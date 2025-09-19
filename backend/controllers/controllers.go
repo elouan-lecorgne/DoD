@@ -472,7 +472,7 @@ func (ctrl *Controller) UpdateDoD(c *gin.Context) {
 		return
 	}
 
-	var req UpdateDoDRequest
+	var req models.UpdateDoDRequest 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -567,7 +567,7 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 		return
 	}
 
-	var req UpdateDoDItemRequest
+	var req models.UpdateDoDItemRequest 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
