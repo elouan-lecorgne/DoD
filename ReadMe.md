@@ -226,7 +226,7 @@ dod-project/
 │   │   ├── contexts/        # React contexts (Auth)
 │   │   ├── pages/           # Page components (Login, Dashboard)
 │   │   ├── services/        # API services
-│   │   └── tests/           # Frontend tests
+│   │   └── __tests__/           # Frontend tests
 │   ├── .env                 # Environment variables
 │   └── nginx.conf           # Nginx configuration
 ├── .github/
