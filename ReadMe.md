@@ -12,7 +12,7 @@ A comprehensive web application for managing Definition of Done (DoD) in softwar
 
 ## Team Members
 
-- **Elouan Lecorgne** - Full Stack Developer
+- **Elouan Lecorgne** 
 
 ## Features
 
@@ -290,7 +290,7 @@ docker build -f Dockerfile -t dod-frontend .
 
 ### GitHub Actions Workflow
 
-The pipeline runs on every push to `main` or `develop` branches:
+The pipeline runs on every push to `test` branch:
 
 1. **Test Stage**:
    - Set up Go 1.21 and Node.js 18
