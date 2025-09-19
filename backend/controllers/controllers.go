@@ -632,27 +632,34 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		return
 	}
 
-	// AJOUTEZ CES LOGS
 	fmt.Printf("=== DELETE ITEM DEBUG ===\n")
 	fmt.Printf("DoD ID: %d, Item ID: %d\n", dodID, itemID)
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que l'item existe et appartient au DoD
+	// SOLUTION: Chercher l'item par ID seulement d'abord
 	var item models.DoDItem
-	// err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
-	// if err != nil {
-	// 	fmt.Printf("Item not found: %v\n", err)
-	// 	c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
-	// 	return
-	// }
+	err = ctrl.DB.Where("id = ?", itemID).First(&item).Error
+	if err != nil {
+		fmt.Printf("Item with ID %d not found: %v\n", itemID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
+		return
+	}
 
-	// fmt.Printf("Item found: %+v\n", item)
+	fmt.Printf("Item found: ID=%d, DoDID=%d, Title=%s\n", item.ID, item.DoDID, item.Title)
+
+	// Vérifier que l'item appartient bien au DoD demandé
+	if item.DoDID != uint(dodID) {
+		fmt.Printf("Item belongs to DoD %d, but request is for DoD %d\n", item.DoDID, dodID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found in specified DoD"})
+		return
+	}
 
 	// Vérifier les permissions via le DoD
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
+		fmt.Printf("DoD %d not found: %v\n", dodID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
 		return
 	}
@@ -662,16 +669,20 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
 	
 	if err != nil {
+		fmt.Printf("Permission denied: %v\n", err)
 		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to delete this DoD item"})
 		return
 	}
 
-	// Supprimer l'item
-	if err := ctrl.DB.Delete(&item).Error; err != nil {
+	// IMPORTANT: Supprimer seulement cet item spécifique par son ID unique
+	fmt.Printf("Deleting item with ID: %d\n", item.ID)
+	if err := ctrl.DB.Delete(&models.DoDItem{}, item.ID).Error; err != nil {
+		fmt.Printf("Failed to delete item: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete DoD item"})
 		return
 	}
 
+	fmt.Printf("Item deleted successfully\n")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "DoD item deleted successfully",
 	})
