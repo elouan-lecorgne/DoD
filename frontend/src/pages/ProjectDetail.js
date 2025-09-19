@@ -25,6 +25,13 @@ import {
   Paper,
   Tabs,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -36,6 +43,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PersonIcon from '@mui/icons-material/Person';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -43,15 +52,19 @@ const ProjectDetail = () => {
   const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [dods, setDods] = useState([]);
+  const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tabValue, setTabValue] = useState(0);
+  const [userRole, setUserRole] = useState(null);
   
   // Dialog states
   const [dodDialogOpen, setDodDialogOpen] = useState(false);
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [participantDialogOpen, setParticipantDialogOpen] = useState(false);
+  const [deleteParticipantDialog, setDeleteParticipantDialog] = useState({ open: false, participant: null });
   const [selectedDodId, setSelectedDodId] = useState(null);
+  const [deletingParticipant, setDeletingParticipant] = useState(false);
 
   const dodForm = useForm();
   const itemForm = useForm();
@@ -59,6 +72,8 @@ const ProjectDetail = () => {
 
   useEffect(() => {
     fetchProjectData();
+    fetchProjectDetails();
+    fetchParticipants();
   }, [id]);
 
   const fetchProjectData = async () => {
@@ -68,6 +83,32 @@ const ProjectDetail = () => {
     } catch (err) {
       setError('Failed to fetch project data');
       console.error('Error fetching project data:', err);
+    }
+  };
+
+  const fetchProjectDetails = async () => {
+    try {
+      const response = await projectService.getProject(id);
+      setProject(response.data.project);
+    } catch (err) {
+      console.error('Error fetching project details:', err);
+    }
+  };
+
+  const fetchParticipants = async () => {
+    try {
+      const response = await projectService.getParticipants(id);
+      setParticipants(response.data.participants || []);
+      
+      // Déterminer le rôle de l'utilisateur actuel
+      const currentUserParticipant = response.data.participants?.find(p => p.user?.id === user?.id);
+      if (currentUserParticipant) {
+        setUserRole(currentUserParticipant.role);
+      } else if (project && project.owner?.id === user?.id) {
+        setUserRole('owner');
+      }
+    } catch (err) {
+      console.error('Error fetching participants:', err);
     } finally {
       setLoading(false);
     }
@@ -107,8 +148,50 @@ const ProjectDetail = () => {
       await projectService.addParticipant(id, data.email, data.role);
       setParticipantDialogOpen(false);
       participantForm.reset();
+      fetchParticipants();
+      setError(''); // Clear any existing errors
     } catch (err) {
       setError('Failed to add participant');
+    }
+  };
+
+  const handleDeleteParticipant = async () => {
+    if (!deleteParticipantDialog.participant) return;
+
+    setDeletingParticipant(true);
+    try {
+      await projectService.removeParticipant(id, deleteParticipantDialog.participant.id);
+      setDeleteParticipantDialog({ open: false, participant: null });
+      fetchParticipants();
+      setError(''); // Clear any existing errors
+    } catch (err) {
+      setError('Failed to remove participant');
+    } finally {
+      setDeletingParticipant(false);
+    }
+  };
+
+  const canManageParticipants = () => {
+    return userRole === 'owner' || userRole === 'editor';
+  };
+
+  const canAddParticipants = () => {
+    return userRole !== 'viewer';
+  };
+
+  const canRemoveParticipant = (participant) => {
+    // Ne peut pas se supprimer soi-même ou supprimer le owner
+    return canManageParticipants() && 
+           participant.user?.id !== user?.id && 
+           participant.role !== 'owner';
+  };
+
+  const getRoleColor = (role) => {
+    switch (role) {
+      case 'owner': return 'error';
+      case 'editor': return 'primary';
+      case 'viewer': return 'default';
+      default: return 'default';
     }
   };
 
@@ -142,17 +225,25 @@ const ProjectDetail = () => {
 
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom>
-          Project Details
+          {project?.name || 'Project Details'}
         </Typography>
         <Typography variant="body1" color="textSecondary">
-          Manage Definition of Done for this project
+          {project?.description || 'Manage Definition of Done for this project'}
         </Typography>
+        <Box sx={{ mt: 1 }}>
+          <Chip
+            label={`Your Role: ${userRole || 'Unknown'}`}
+            color={getRoleColor(userRole)}
+            size="small"
+            variant="outlined"
+          />
+        </Box>
       </Box>
 
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="Definition of Done" icon={<AssignmentIcon />} />
-          <Tab label="Participants" icon={<PeopleIcon />} />
+          <Tab label={`Participants (${participants.length})`} icon={<PeopleIcon />} />
         </Tabs>
       </Paper>
 
@@ -162,13 +253,15 @@ const ProjectDetail = () => {
             <Typography variant="h5">
               Definition of Done ({dods.length})
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setDodDialogOpen(true)}
-            >
-              New DoD
-            </Button>
+            {(userRole === 'owner' || userRole === 'editor') && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setDodDialogOpen(true)}
+              >
+                New DoD
+              </Button>
+            )}
           </Box>
 
           {dods.length === 0 ? (
@@ -181,13 +274,15 @@ const ProjectDetail = () => {
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
                   Create your first DoD to start defining completion criteria
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setDodDialogOpen(true)}
-                >
-                  Create DoD
-                </Button>
+                {(userRole === 'owner' || userRole === 'editor') && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setDodDialogOpen(true)}
+                  >
+                    Create DoD
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -247,15 +342,17 @@ const ProjectDetail = () => {
                     </CardContent>
 
                     <CardActions>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          setSelectedDodId(dod.id);
-                          setItemDialogOpen(true);
-                        }}
-                      >
-                        Add Item
-                      </Button>
+                      {(userRole === 'owner' || userRole === 'editor') && (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedDodId(dod.id);
+                            setItemDialogOpen(true);
+                          }}
+                        >
+                          Add Item
+                        </Button>
+                      )}
                     </CardActions>
                   </Card>
                 </Grid>
@@ -269,24 +366,95 @@ const ProjectDetail = () => {
         <>
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h5">
-              Participants
+              Participants ({participants.length})
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setParticipantDialogOpen(true)}
-            >
-              Add Participant
-            </Button>
+            {canAddParticipants() && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setParticipantDialogOpen(true)}
+              >
+                Add Participant
+              </Button>
+            )}
           </Box>
 
-          <Card>
-            <CardContent>
-              <Typography variant="body1">
-                Participant management will be implemented here.
-              </Typography>
-            </CardContent>
-          </Card>
+          {participants.length === 0 ? (
+            <Card sx={{ textAlign: 'center', py: 6 }}>
+              <CardContent>
+                <PeopleIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  No participants yet
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+                  Add team members to collaborate on this project
+                </Typography>
+                {canAddParticipants() && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setParticipantDialogOpen(true)}
+                  >
+                    Add Participant
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>User</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Joined</TableCell>
+                    {canManageParticipants() && <TableCell>Actions</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {participants.map((participant) => (
+                    <TableRow key={participant.id}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                          {participant.user?.username || 'Unknown'}
+                        </Box>
+                      </TableCell>
+                      <TableCell>{participant.user?.email || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={participant.role}
+                          color={getRoleColor(participant.role)}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(participant.created_at).toLocaleDateString()}
+                      </TableCell>
+                      {canManageParticipants() && (
+                        <TableCell>
+                          {canRemoveParticipant(participant) && (
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => setDeleteParticipantDialog({ 
+                                open: true, 
+                                participant 
+                              })}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </>
       )}
 
@@ -405,6 +573,33 @@ const ProjectDetail = () => {
             <Button type="submit" variant="contained">Add Participant</Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Participant Dialog */}
+      <Dialog
+        open={deleteParticipantDialog.open}
+        onClose={() => setDeleteParticipantDialog({ open: false, participant: null })}
+      >
+        <DialogTitle>Remove Participant</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove {deleteParticipantDialog.participant?.user?.username} from this project?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteParticipantDialog({ open: false, participant: null })} disabled={deletingParticipant}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteParticipant}
+            color="error"
+            variant="contained"
+            disabled={deletingParticipant}
+            startIcon={deletingParticipant ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deletingParticipant ? 'Removing...' : 'Remove'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );

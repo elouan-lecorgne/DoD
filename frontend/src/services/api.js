@@ -54,12 +54,18 @@ export const authService = {
 export const projectService = {
   getProjects: () =>
     api.get('/projects/'),
+  getProject: (projectId) =>
+    api.get(`/projects/${projectId}`),                    
   createProject: (name, description) =>
     api.post('/projects/', { name, description }),
   deleteProject: (projectId) =>
-    api.delete(`/projects/${projectId}`), // ← Ajoutez cette ligne
+    api.delete(`/projects/${projectId}`),
+  getParticipants: (projectId) =>
+    api.get(`/projects/${projectId}/participants`),      
   addParticipant: (projectId, email, role) =>
     api.post(`/projects/${projectId}/participants`, { email, role }),
+  removeParticipant: (projectId, participantId) =>
+    api.delete(`/projects/${projectId}/participants/${participantId}`), 
   getProjectDoDs: (projectId) =>
     api.get(`/projects/${projectId}/dods`),
 };

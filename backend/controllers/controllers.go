@@ -154,16 +154,14 @@ func (ctrl *Controller) AddProjectParticipant(c *gin.Context) {
 		return
 	}
 
-	// Check if user is project owner
+	// Vérifier que l'utilisateur peut ajouter des participants (pas viewer)
 	currentUserID := c.GetUint("user_id")
-	var project models.Project
-	if err := ctrl.DB.First(&project, projectID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
-		return
-	}
-
-	if project.OwnerID != currentUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only project owner can add participants"})
+	var userParticipant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
+		projectID, currentUserID, []string{"owner", "editor"}).First(&userParticipant).Error
+	
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to add participants"})
 		return
 	}
 
@@ -352,5 +350,117 @@ func (ctrl *Controller) DeleteProject(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Project deleted successfully",
+	})
+}
+
+
+func (ctrl *Controller) GetProject(c *gin.Context) {
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que l'utilisateur a accès au projet
+	var participant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ?", projectID, userID).First(&participant).Error
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No access to this project"})
+		return
+	}
+
+	var project models.Project
+	if err := ctrl.DB.Preload("Owner").First(&project, projectID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"project": project})
+}
+
+func (ctrl *Controller) GetParticipants(c *gin.Context) {
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que l'utilisateur a accès au projet
+	var userParticipant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ?", projectID, userID).First(&userParticipant).Error
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No access to this project"})
+		return
+	}
+
+	var participants []models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ?", projectID).
+		Preload("User").
+		Find(&participants).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch participants"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"participants": participants})
+}
+
+func (ctrl *Controller) RemoveParticipant(c *gin.Context) {
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	participantID, err := strconv.Atoi(c.Param("participantId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid participant ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que l'utilisateur peut gérer les participants (owner ou editor)
+	var userParticipant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
+		projectID, userID, []string{"owner", "editor"}).First(&userParticipant).Error
+	
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to remove participants"})
+		return
+	}
+
+	// Récupérer le participant à supprimer
+	var participant models.ProjectParticipant
+	err = ctrl.DB.Where("id = ? AND project_id = ?", participantID, projectID).First(&participant).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Participant not found"})
+		return
+	}
+
+	// Empêcher la suppression du owner ou de soi-même
+	if participant.Role == "owner" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot remove project owner"})
+		return
+	}
+
+	if participant.UserID == userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot remove yourself"})
+		return
+	}
+
+	// Supprimer le participant
+	if err := ctrl.DB.Delete(&participant).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove participant"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Participant removed successfully",
 	})
 }
