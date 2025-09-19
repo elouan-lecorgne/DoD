@@ -809,8 +809,8 @@ const ProjectDetail = () => {
             <FormControlLabel
               control={
                 <Checkbox
-                  {...itemForm.register('isRequired')}
-                  defaultChecked={true}
+                  checked={itemForm.watch('isRequired') !== false} // Par défaut true
+                  onChange={(e) => itemForm.setValue('isRequired', e.target.checked)}
                 />
               }
               label="Required item"
@@ -853,7 +853,10 @@ const ProjectDetail = () => {
             />
             <FormControlLabel
               control={
-                <Checkbox {...editItemForm.register('isRequired')} />
+                <Checkbox 
+                  {...editItemForm.register('isRequired')}
+                  checked={editItemForm.watch('isRequired')} // ← Ajoutez cette ligne
+                />
               }
               label="Required item"
             />
