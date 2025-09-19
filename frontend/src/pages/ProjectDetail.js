@@ -200,7 +200,8 @@ const ProjectDetail = () => {
   const handleEditItem = async (data) => {
     try {
       await dodService.updateDoDItem(
-        editingItem.id,
+        editingItem.dod_id,  
+        editingItem.id,      
         data.title,
         data.description,
         data.isRequired,
@@ -215,13 +216,15 @@ const ProjectDetail = () => {
       setError('Failed to update DoD item');
     }
   };
-
   const handleDeleteItem = async () => {
     if (!deleteItemDialog.item) return;
-
+  
     setDeletingItem(true);
     try {
-      await dodService.deleteDoDItem(deleteItemDialog.item.id);
+      await dodService.deleteDoDItem(
+        deleteItemDialog.item.dod_id,  
+        deleteItemDialog.item.id      
+      );
       setDeleteItemDialog({ open: false, item: null });
       fetchProjectData();
       setError('');
@@ -288,6 +291,9 @@ const ProjectDetail = () => {
   };
 
   const openEditItemDialog = (item) => {
+    console.log('Edit item - full object:', item);  
+    console.log('Edit item - dod_id:', item.dod_id); 
+
     setEditingItem(item);
     editItemForm.setValue('title', item.title);
     editItemForm.setValue('description', item.description || '');
