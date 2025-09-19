@@ -102,6 +102,18 @@ func (ctrl *Controller) CreateProject(c *gin.Context) {
 	}
 
 	userID := c.GetUint("user_id")
+	fmt.Printf("=== CREATE PROJECT DEBUG ===\n")
+	fmt.Printf("UserID from context: %d\n", userID)
+
+	// Vérifier que l'utilisateur existe
+	var user models.User
+	if err := ctrl.DB.First(&user, userID).Error; err != nil {
+		fmt.Printf("User not found in DB: %v\n", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+	fmt.Printf("User found: ID=%d, Username=%s, Email=%s\n", user.ID, user.Username, user.Email)
+
 	project := models.Project{
 		Name:        req.Name,
 		Description: req.Description,
@@ -109,25 +121,44 @@ func (ctrl *Controller) CreateProject(c *gin.Context) {
 	}
 
 	if err := ctrl.DB.Create(&project).Error; err != nil {
+		fmt.Printf("Failed to create project: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create project"})
 		return
 	}
+
+	fmt.Printf("Project created: ID=%d, Name=%s, OwnerID=%d\n", project.ID, project.Name, project.OwnerID)
 
 	participant := models.ProjectParticipant{
 		ProjectID: project.ID,
 		UserID:    userID,
 		Role:      "owner",
 	}
-	ctrl.DB.Create(&participant)
+	
+	if err := ctrl.DB.Create(&participant).Error; err != nil {
+		fmt.Printf("Failed to create participant: %v\n", err)
+	} else {
+		fmt.Printf("Participant created: ProjectID=%d, UserID=%d, Role=%s\n", participant.ProjectID, participant.UserID, participant.Role)
+	}
+
+	// Recharger le projet avec Owner
+	if err := ctrl.DB.Preload("Owner").First(&project, project.ID).Error; err != nil {
+		fmt.Printf("Failed to reload project with Owner: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load project owner"})
+		return
+	}
+
+	fmt.Printf("Project reloaded with Owner: %+v\n", project.Owner)
+	fmt.Printf("Owner details: ID=%d, Username=%s, Email=%s\n", project.Owner.ID, project.Owner.Username, project.Owner.Email)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Project created successfully",
 		"project": project,
 	})
 }
-
 func (ctrl *Controller) GetUserProjects(c *gin.Context) {
 	userID := c.GetUint("user_id")
+	fmt.Printf("=== GET USER PROJECTS DEBUG ===\n")
+	fmt.Printf("UserID: %d\n", userID)
 
 	var projects []models.Project
 	err := ctrl.DB.Joins("JOIN project_participants ON projects.id = project_participants.project_id").
@@ -136,8 +167,19 @@ func (ctrl *Controller) GetUserProjects(c *gin.Context) {
 		Find(&projects).Error
 
 	if err != nil {
+		fmt.Printf("Error fetching projects: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch projects"})
 		return
+	}
+
+	fmt.Printf("Found %d projects\n", len(projects))
+	for i, project := range projects {
+		fmt.Printf("Project %d: ID=%d, Name=%s, OwnerID=%d\n", i, project.ID, project.Name, project.OwnerID)
+		if project.Owner.ID != 0 {
+			fmt.Printf("  Owner: ID=%d, Username=%s, Email=%s\n", project.Owner.ID, project.Owner.Username, project.Owner.Email)
+		} else {
+			fmt.Printf("  Owner: EMPTY/NULL\n")
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"projects": projects})
