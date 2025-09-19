@@ -309,15 +309,6 @@ The pipeline runs on every push to `test` branch:
 - **Test Coverage**: Frontend and backend code coverage
 - **Build Verification**: Ensures both apps compile successfully
 
-## Test Accounts
-
-The application comes with seeded test data:
-
-| Email | Password | Projects |
-|-------|----------|----------|
-| alice@example.com | password123 | Sample projects with DoDs |
-| bob@example.com | password123 | Participant in shared projects |
-| charlie@example.com | password123 | New user setup |
 
 ## Troubleshooting
 
