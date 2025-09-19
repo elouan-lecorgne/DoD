@@ -557,13 +557,13 @@ func (ctrl *Controller) DeleteDoD(c *gin.Context) {
 }
 
 func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
-	dodID, err := strconv.Atoi(c.Param("id"))  // ← Changé de "dodId" à "id"
+	dodID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
 		return
 	}
 
-	itemID, err := strconv.Atoi(c.Param("itemId"))  // ← Reste "itemId"
+	itemID, err := strconv.Atoi(c.Param("itemId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
 		return
@@ -575,13 +575,26 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("=== UPDATE ITEM DEBUG ===\n")
+	fmt.Printf("DoD ID: %d, Item ID: %d\n", dodID, itemID)
+
 	userID := c.GetUint("user_id")
 
-	// Vérifier que l'item existe et appartient au DoD
+	// SOLUTION: Chercher l'item par ID seulement d'abord
 	var item models.DoDItem
-	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
+	err = ctrl.DB.Where("id = ?", itemID).First(&item).Error
 	if err != nil {
+		fmt.Printf("Item with ID %d not found: %v\n", itemID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
+		return
+	}
+
+	fmt.Printf("Item found: ID=%d, DoDID=%d, Title=%s\n", item.ID, item.DoDID, item.Title)
+
+	// Vérifier que l'item appartient bien au DoD demandé
+	if item.DoDID != uint(dodID) {
+		fmt.Printf("Item belongs to DoD %d, but request is for DoD %d\n", item.DoDID, dodID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found in specified DoD"})
 		return
 	}
 
@@ -589,6 +602,7 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
+		fmt.Printf("DoD %d not found: %v\n", dodID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
 		return
 	}
@@ -598,21 +612,25 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
 	
 	if err != nil {
+		fmt.Printf("Permission denied: %v\n", err)
 		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to edit this DoD item"})
 		return
 	}
 
 	// Mettre à jour l'item
+	fmt.Printf("Updating item: %s -> %s\n", item.Title, req.Title)
 	item.Title = req.Title
 	item.Description = req.Description
 	item.IsRequired = req.IsRequired
 	item.Order = req.Order
 
 	if err := ctrl.DB.Save(&item).Error; err != nil {
+		fmt.Printf("Failed to save item: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update DoD item"})
 		return
 	}
 
+	fmt.Printf("Item updated successfully\n")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "DoD item updated successfully",
 		"item":    item,
