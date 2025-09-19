@@ -464,3 +464,206 @@ func (ctrl *Controller) RemoveParticipant(c *gin.Context) {
 		"message": "Participant removed successfully",
 	})
 }
+
+func (ctrl *Controller) UpdateDoD(c *gin.Context) {
+	dodID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
+		return
+	}
+
+	var req UpdateDoDRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que le DoD existe et que l'utilisateur a les permissions
+	var dod models.DoD
+	err = ctrl.DB.First(&dod, dodID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
+		return
+	}
+
+	// Vérifier les permissions (owner ou editor)
+	var participant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
+		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
+	
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to edit this DoD"})
+		return
+	}
+
+	// Mettre à jour le DoD
+	dod.Title = req.Title
+	dod.Description = req.Description
+
+	if err := ctrl.DB.Save(&dod).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update DoD"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "DoD updated successfully",
+		"dod":     dod,
+	})
+}
+
+func (ctrl *Controller) DeleteDoD(c *gin.Context) {
+	dodID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que le DoD existe et que l'utilisateur a les permissions
+	var dod models.DoD
+	err = ctrl.DB.First(&dod, dodID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
+		return
+	}
+
+	// Vérifier les permissions (owner ou editor)
+	var participant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
+		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
+	
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to delete this DoD"})
+		return
+	}
+
+	// Supprimer d'abord tous les items associés
+	ctrl.DB.Where("dod_id = ?", dodID).Delete(&models.DoDItem{})
+	
+	// Supprimer le DoD
+	if err := ctrl.DB.Delete(&dod).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete DoD"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "DoD deleted successfully",
+	})
+}
+
+func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
+	dodID, err := strconv.Atoi(c.Param("dodId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
+		return
+	}
+
+	itemID, err := strconv.Atoi(c.Param("itemId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	var req UpdateDoDItemRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que l'item existe et appartient au DoD
+	var item models.DoDItem
+	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
+		return
+	}
+
+	// Vérifier les permissions via le DoD
+	var dod models.DoD
+	err = ctrl.DB.First(&dod, dodID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
+		return
+	}
+
+	var participant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
+		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
+	
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to edit this DoD item"})
+		return
+	}
+
+	// Mettre à jour l'item
+	item.Title = req.Title
+	item.Description = req.Description
+	item.IsRequired = req.IsRequired
+	item.Order = req.Order
+
+	if err := ctrl.DB.Save(&item).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update DoD item"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "DoD item updated successfully",
+		"item":    item,
+	})
+}
+
+func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
+	dodID, err := strconv.Atoi(c.Param("dodId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid DoD ID"})
+		return
+	}
+
+	itemID, err := strconv.Atoi(c.Param("itemId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que l'item existe et appartient au DoD
+	var item models.DoDItem
+	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
+		return
+	}
+
+	// Vérifier les permissions via le DoD
+	var dod models.DoD
+	err = ctrl.DB.First(&dod, dodID).Error
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
+		return
+	}
+
+	var participant models.ProjectParticipant
+	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
+		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
+	
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to delete this DoD item"})
+		return
+	}
+
+	// Supprimer l'item
+	if err := ctrl.DB.Delete(&item).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete DoD item"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "DoD item deleted successfully",
+	})
+}

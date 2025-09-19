@@ -52,7 +52,11 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 			dods := protected.Group("/dods")
 			{
 				dods.POST("/", ctrl.CreateDoD)
+				dods.PUT("/:id", ctrl.UpdateDoD)                                   
+				dods.DELETE("/:id", ctrl.DeleteDoD)                                
 				dods.POST("/:id/items", ctrl.AddDoDItem)
+				dods.PUT("/:dodId/items/:itemId", ctrl.UpdateDoDItem)             
+				dods.DELETE("/:dodId/items/:itemId", ctrl.DeleteDoDItem)          
 			}
 		}
 	}

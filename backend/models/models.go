@@ -101,3 +101,15 @@ type AddParticipantRequest struct {
 	Email string `json:"email" binding:"required,email"`
 	Role  string `json:"role" binding:"required,oneof=editor viewer"`
 }
+
+type UpdateDoDRequest struct {
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
+}
+
+type UpdateDoDItemRequest struct {
+	Title       string `json:"title" binding:"required"`
+	Description string `json:"description"`
+	IsRequired  bool   `json:"is_required"`
+	Order       int    `json:"order"`
+}
