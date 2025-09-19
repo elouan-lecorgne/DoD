@@ -57,7 +57,7 @@ type DoD struct {
 
 type DoDItem struct {
 	ID          uint      `json:"id" gorm:"primary_key"`
-	DoDID       uint      `json:"dod_id" gorm:"not null"`
+	DoDID       uint      `json:"dod_id" gorm:"column:do_d_id;not null"`
 	Title       string    `json:"title" gorm:"not null"`
 	Description string    `json:"description"`
 	IsRequired  bool      `json:"is_required" gorm:"default:true"`
