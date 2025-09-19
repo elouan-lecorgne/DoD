@@ -40,6 +40,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 			{
 				projects.POST("/", ctrl.CreateProject)
 				projects.GET("/", ctrl.GetUserProjects)
+				projects.DELETE("/:id", ctrl.DeleteProject) 
 				projects.POST("/:id/participants", ctrl.AddProjectParticipant)
 				projects.GET("/:id/dods", ctrl.GetProjectDoDs)
 			}

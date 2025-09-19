@@ -54,13 +54,12 @@ export const authService = {
 export const projectService = {
   getProjects: () =>
     api.get('/projects/'),
-  
   createProject: (name, description) =>
     api.post('/projects/', { name, description }),
-  
+  deleteProject: (projectId) =>
+    api.delete(`/projects/${projectId}`), // ← Ajoutez cette ligne
   addParticipant: (projectId, email, role) =>
     api.post(`/projects/${projectId}/participants`, { email, role }),
-  
   getProjectDoDs: (projectId) =>
     api.get(`/projects/${projectId}/dods`),
 };

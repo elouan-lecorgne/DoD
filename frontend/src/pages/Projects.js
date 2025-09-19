@@ -13,6 +13,11 @@ import {
   Chip,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +26,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ProjectIcon from '@mui/icons-material/Folder';
 import AddIcon from '@mui/icons-material/Add';
 import PeopleIcon from '@mui/icons-material/People';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const Projects = () => {
   const { user } = useAuth();
@@ -29,6 +35,8 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, project: null });
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -64,6 +72,41 @@ const Projects = () => {
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
+  };
+
+  const handleDeleteClick = (project) => {
+    setDeleteDialog({ open: true, project });
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialog({ open: false, project: null });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.project) return;
+
+    setDeleting(true);
+    try {
+      await projectService.deleteProject(deleteDialog.project.id);
+      
+      // Mettre à jour la liste des projets
+      setProjects(prev => prev.filter(p => p.id !== deleteDialog.project.id));
+      
+      // Fermer le dialog
+      setDeleteDialog({ open: false, project: null });
+      
+      // Optionnel: afficher un message de succès
+      setError(''); // Clear any existing errors
+    } catch (err) {
+      setError('Failed to delete project');
+      console.error('Error deleting project:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const isOwner = (project) => {
+    return project.owner?.id === user?.id;
   };
 
   if (loading) {
@@ -189,16 +232,28 @@ const Projects = () => {
                     </Box>
                   </CardContent>
 
-                  <CardActions sx={{ p: 2, pt: 0 }}>
+                  <CardActions sx={{ p: 2, pt: 0, gap: 1 }}>
                     <Button
                       size="small"
                       component={Link}
                       to={`/projects/${project.id}`}
                       variant="contained"
-                      fullWidth
+                      sx={{ flexGrow: 1 }}
                     >
                       View Project
                     </Button>
+                    
+                    {isOwner(project) && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDeleteClick(project)}
+                      >
+                        Delete
+                      </Button>
+                    )}
                   </CardActions>
                 </Card>
               </Grid>
@@ -206,6 +261,38 @@ const Projects = () => {
           </Grid>
         </>
       )}
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog
+        open={deleteDialog.open}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Delete Project
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete the project "{deleteDialog.project?.name}"?
+            This action cannot be undone and will permanently remove all project data.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

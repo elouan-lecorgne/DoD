@@ -312,3 +312,45 @@ func (ctrl *Controller) AddDoDItem(c *gin.Context) {
 		"item":    item,
 	})
 }
+
+func (ctrl *Controller) DeleteProject(c *gin.Context) {
+	projectID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
+		return
+	}
+
+	userID := c.GetUint("user_id")
+
+	// Vérifier que le projet existe et que l'utilisateur en est le propriétaire
+	var project models.Project
+	if err := ctrl.DB.First(&project, projectID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+		return
+	}
+
+	if project.OwnerID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only project owner can delete the project"})
+		return
+	}
+
+	// Supprimer en cascade les données associées
+	// 1. Supprimer les DoD items
+	ctrl.DB.Where("dod_id IN (SELECT id FROM do_ds WHERE project_id = ?)", projectID).Delete(&models.DoDItem{})
+	
+	// 2. Supprimer les DoDs
+	ctrl.DB.Where("project_id = ?", projectID).Delete(&models.DoD{})
+	
+	// 3. Supprimer les participants
+	ctrl.DB.Where("project_id = ?", projectID).Delete(&models.ProjectParticipant{})
+	
+	// 4. Supprimer le projet
+	if err := ctrl.DB.Delete(&project).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete project"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Project deleted successfully",
+	})
+}
