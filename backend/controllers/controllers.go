@@ -632,26 +632,19 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		return
 	}
 
-	// AJOUTEZ CES LOGS
-	fmt.Printf("=== DELETE ITEM DEBUG ===\n")
-	fmt.Printf("DoD ID: %d, Item ID: %d\n", dodID, itemID)
-
 	userID := c.GetUint("user_id")
 
-	// Vérifier que l'item existe et appartient au DoD
+	// CHERCHEZ L'ITEM SEULEMENT PAR ID (TEMPORAIRE)
 	var item models.DoDItem
-	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
+	err = ctrl.DB.Where("id = ?", itemID).First(&item).Error
 	if err != nil {
-		fmt.Printf("Item not found: %v\n", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
 		return
 	}
 
-	fmt.Printf("Item found: %+v\n", item)
-
-	// Vérifier les permissions via le DoD
+	// Vérifier les permissions via le DoD réel de l'item
 	var dod models.DoD
-	err = ctrl.DB.First(&dod, dodID).Error
+	err = ctrl.DB.First(&dod, item.DoDID).Error  // Utilisez l'ID réel du DoD
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
 		return
