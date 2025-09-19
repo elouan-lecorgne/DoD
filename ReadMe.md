@@ -10,7 +10,7 @@ A comprehensive web application for managing Definition of Done (DoD) in softwar
 
 **Live Application**: https://dod-manager.onrender.com
 
-## Team Members
+## Team Member
 
 - **Elouan Lecorgne** 
 

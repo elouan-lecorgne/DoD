@@ -8,9 +8,7 @@ import (
 	"testing"
 
 	"dod-backend/config"
-	"dod-backend/controllers"
 	"dod-backend/database"
-	"dod-backend/middleware"
 	"dod-backend/models"
 	"dod-backend/routes"
 
@@ -19,19 +17,16 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
-    router := setupTestRouter()
-    
-    w := httptest.NewRecorder()
-    req, _ := http.NewRequest("GET", "/health", nil)
-    router.ServeHTTP(w, req)
-    
-    assert.Equal(t, http.StatusOK, w.Code)
-    
-    var response map[string]interface{}
-    json.Unmarshal(w.Body.Bytes(), &response)
-    assert.Equal(t, "ok", response["status"])
-}
+	router := setupTestRouter()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/health", nil)
+	router.ServeHTTP(w, req)
 
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &response)
+	assert.Equal(t, "ok", response["status"])
+}
 
 func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
@@ -40,19 +35,21 @@ func setupTestRouter() *gin.Engine {
 	cfg := &config.Config{
 		DBHost:      "localhost",
 		DBPort:      "5432",
-		DBUser:      "test_user",
-		DBPassword:  "test_password",
-		DBName:      "test_database",
+		DBUser:      "dod_user",      
+		DBPassword:  "dod_password",
+		DBName:      "dod_database",  
 		JWTSecret:   "test-secret-key",
 		Environment: "test",
 	}
 
-	// Initialize test database (you might want to use sqlite in memory for tests)
+	// Initialize test database
 	db := database.Initialize(cfg)
+	
+	// Clean tables before each test (optional)
+	// db.Exec("TRUNCATE users, projects, project_participants, do_ds, dod_items CASCADE")
 	
 	r := gin.Default()
 	routes.SetupRoutes(r, db)
-	
 	return r
 }
 
