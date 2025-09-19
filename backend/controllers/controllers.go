@@ -639,7 +639,7 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	// Vérifier que l'item existe et appartient au DoD
-	// var item models.DoDItem
+	var item models.DoDItem
 	// err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
 	// if err != nil {
 	// 	fmt.Printf("Item not found: %v\n", err)
