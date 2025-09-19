@@ -96,7 +96,7 @@ GIN_MODE=debug
 
 #### Frontend (`frontend/.env`)
 ```env
-REACT_APP_API_URL=/api/v1
+REACT_APP_API_URL=http://localhost:8080/api/v1
 REACT_APP_NAME=DoD Manager
 ```
 
