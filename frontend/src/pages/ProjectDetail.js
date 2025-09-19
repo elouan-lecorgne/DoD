@@ -121,7 +121,6 @@ const ProjectDetail = () => {
       const response = await projectService.getParticipants(id);
       setParticipants(response.data.participants || []);
       
-      // Déterminer le rôle de l'utilisateur actuel
       const currentUserParticipant = response.data.participants?.find(p => p.user?.id === user?.id);
       if (currentUserParticipant) {
         setUserRole(currentUserParticipant.role);
@@ -809,7 +808,7 @@ const ProjectDetail = () => {
             <FormControlLabel
               control={
                 <Checkbox
-                  checked={itemForm.watch('isRequired') == true} // Par défaut true
+                  checked={itemForm.watch('isRequired') !== false} 
                   onChange={(e) => itemForm.setValue('isRequired', e.target.checked)}
                 />
               }
@@ -855,7 +854,7 @@ const ProjectDetail = () => {
               control={
                 <Checkbox 
                   {...editItemForm.register('isRequired')}
-                  checked={editItemForm.watch('isRequired')} // ← Ajoutez cette ligne
+                  checked={editItemForm.watch('isRequired')} 
                 />
               }
               label="Required item"

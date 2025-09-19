@@ -85,7 +85,6 @@ export const dodService = {
       is_required: isRequired,
       order,
     }),
-  // Routes corrigées pour correspondre au backend :
   updateDoDItem: (dodId, itemId, title, description, isRequired = true, order = 0) =>
     api.put(`/dods/${dodId}/items/${itemId}`, {
       title,

@@ -156,7 +156,6 @@ func (ctrl *Controller) AddProjectParticipant(c *gin.Context) {
 		return
 	}
 
-	// Vérifier que l'utilisateur peut ajouter des participants (pas viewer)
 	currentUserID := c.GetUint("user_id")
 	var userParticipant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
@@ -322,7 +321,6 @@ func (ctrl *Controller) DeleteProject(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que le projet existe et que l'utilisateur en est le propriétaire
 	var project models.Project
 	if err := ctrl.DB.First(&project, projectID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
@@ -334,17 +332,12 @@ func (ctrl *Controller) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	// Supprimer en cascade les données associées
-	// 1. Supprimer les DoD items
 	ctrl.DB.Where("dod_id IN (SELECT id FROM do_ds WHERE project_id = ?)", projectID).Delete(&models.DoDItem{})
 	
-	// 2. Supprimer les DoDs
 	ctrl.DB.Where("project_id = ?", projectID).Delete(&models.DoD{})
 	
-	// 3. Supprimer les participants
 	ctrl.DB.Where("project_id = ?", projectID).Delete(&models.ProjectParticipant{})
 	
-	// 4. Supprimer le projet
 	if err := ctrl.DB.Delete(&project).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete project"})
 		return
@@ -365,7 +358,6 @@ func (ctrl *Controller) GetProject(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que l'utilisateur a accès au projet
 	var participant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ?", projectID, userID).First(&participant).Error
 	if err != nil {
@@ -391,7 +383,6 @@ func (ctrl *Controller) GetParticipants(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que l'utilisateur a accès au projet
 	var userParticipant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ?", projectID, userID).First(&userParticipant).Error
 	if err != nil {
@@ -427,7 +418,6 @@ func (ctrl *Controller) RemoveParticipant(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que l'utilisateur peut gérer les participants (owner ou editor)
 	var userParticipant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
 		projectID, userID, []string{"owner", "editor"}).First(&userParticipant).Error
@@ -437,7 +427,6 @@ func (ctrl *Controller) RemoveParticipant(c *gin.Context) {
 		return
 	}
 
-	// Récupérer le participant à supprimer
 	var participant models.ProjectParticipant
 	err = ctrl.DB.Where("id = ? AND project_id = ?", participantID, projectID).First(&participant).Error
 	if err != nil {
@@ -445,7 +434,6 @@ func (ctrl *Controller) RemoveParticipant(c *gin.Context) {
 		return
 	}
 
-	// Empêcher la suppression du owner ou de soi-même
 	if participant.Role == "owner" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot remove project owner"})
 		return
@@ -456,7 +444,6 @@ func (ctrl *Controller) RemoveParticipant(c *gin.Context) {
 		return
 	}
 
-	// Supprimer le participant
 	if err := ctrl.DB.Delete(&participant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove participant"})
 		return
@@ -482,7 +469,6 @@ func (ctrl *Controller) UpdateDoD(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que le DoD existe et que l'utilisateur a les permissions
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
@@ -490,7 +476,6 @@ func (ctrl *Controller) UpdateDoD(c *gin.Context) {
 		return
 	}
 
-	// Vérifier les permissions (owner ou editor)
 	var participant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
 		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
@@ -500,7 +485,6 @@ func (ctrl *Controller) UpdateDoD(c *gin.Context) {
 		return
 	}
 
-	// Mettre à jour le DoD
 	dod.Title = req.Title
 	dod.Description = req.Description
 
@@ -524,7 +508,6 @@ func (ctrl *Controller) DeleteDoD(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// Vérifier que le DoD existe et que l'utilisateur a les permissions
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
@@ -532,7 +515,6 @@ func (ctrl *Controller) DeleteDoD(c *gin.Context) {
 		return
 	}
 
-	// Vérifier les permissions (owner ou editor)
 	var participant models.ProjectParticipant
 	err = ctrl.DB.Where("project_id = ? AND user_id = ? AND role IN (?)", 
 		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
@@ -542,10 +524,8 @@ func (ctrl *Controller) DeleteDoD(c *gin.Context) {
 		return
 	}
 
-	// Supprimer d'abord tous les items associés
 	ctrl.DB.Where("dod_id = ?", dodID).Delete(&models.DoDItem{})
 	
-	// Supprimer le DoD
 	if err := ctrl.DB.Delete(&dod).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete DoD"})
 		return
@@ -580,7 +560,6 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// SOLUTION: Chercher l'item par ID seulement d'abord
 	var item models.DoDItem
 	err = ctrl.DB.Where("id = ?", itemID).First(&item).Error
 	if err != nil {
@@ -591,14 +570,12 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 
 	fmt.Printf("Item found: ID=%d, DoDID=%d, Title=%s\n", item.ID, item.DoDID, item.Title)
 
-	// Vérifier que l'item appartient bien au DoD demandé
 	if item.DoDID != uint(dodID) {
 		fmt.Printf("Item belongs to DoD %d, but request is for DoD %d\n", item.DoDID, dodID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found in specified DoD"})
 		return
 	}
 
-	// Vérifier les permissions via le DoD
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
@@ -617,7 +594,6 @@ func (ctrl *Controller) UpdateDoDItem(c *gin.Context) {
 		return
 	}
 
-	// Mettre à jour l'item
 	fmt.Printf("Updating item: %s -> %s\n", item.Title, req.Title)
 	item.Title = req.Title
 	item.Description = req.Description
@@ -655,7 +631,6 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 
 	userID := c.GetUint("user_id")
 
-	// SOLUTION: Chercher l'item par ID seulement d'abord
 	var item models.DoDItem
 	err = ctrl.DB.Where("id = ?", itemID).First(&item).Error
 	if err != nil {
@@ -666,14 +641,12 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 
 	fmt.Printf("Item found: ID=%d, DoDID=%d, Title=%s\n", item.ID, item.DoDID, item.Title)
 
-	// Vérifier que l'item appartient bien au DoD demandé
 	if item.DoDID != uint(dodID) {
 		fmt.Printf("Item belongs to DoD %d, but request is for DoD %d\n", item.DoDID, dodID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found in specified DoD"})
 		return
 	}
 
-	// Vérifier les permissions via le DoD
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
@@ -692,7 +665,6 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		return
 	}
 
-	// IMPORTANT: Supprimer seulement cet item spécifique par son ID unique
 	fmt.Printf("Deleting item with ID: %d\n", item.ID)
 	if err := ctrl.DB.Delete(&models.DoDItem{}, item.ID).Error; err != nil {
 		fmt.Printf("Failed to delete item: %v\n", err)
