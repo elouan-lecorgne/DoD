@@ -32,6 +32,9 @@ import {
   TableHead,
   TableRow,
   IconButton,
+  Menu,
+  MenuItem,
+  ListItemSecondaryAction,
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -45,6 +48,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import EditIcon from '@mui/icons-material/Edit';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -60,14 +65,30 @@ const ProjectDetail = () => {
   
   // Dialog states
   const [dodDialogOpen, setDodDialogOpen] = useState(false);
+  const [editDodDialogOpen, setEditDodDialogOpen] = useState(false);
+  const [deleteDodDialog, setDeleteDodDialog] = useState({ open: false, dod: null });
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
+  const [editItemDialogOpen, setEditItemDialogOpen] = useState(false);
+  const [deleteItemDialog, setDeleteItemDialog] = useState({ open: false, item: null });
   const [participantDialogOpen, setParticipantDialogOpen] = useState(false);
   const [deleteParticipantDialog, setDeleteParticipantDialog] = useState({ open: false, participant: null });
+  
+  // State for editing
   const [selectedDodId, setSelectedDodId] = useState(null);
+  const [editingDod, setEditingDod] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [deletingParticipant, setDeletingParticipant] = useState(false);
+  const [deletingDod, setDeletingDod] = useState(false);
+  const [deletingItem, setDeletingItem] = useState(false);
+
+  // Menu states
+  const [dodMenuAnchor, setDodMenuAnchor] = useState({});
+  const [itemMenuAnchor, setItemMenuAnchor] = useState({});
 
   const dodForm = useForm();
+  const editDodForm = useForm();
   const itemForm = useForm();
+  const editItemForm = useForm();
   const participantForm = useForm();
 
   useEffect(() => {
@@ -114,17 +135,49 @@ const ProjectDetail = () => {
     }
   };
 
+  // DoD Management Functions
   const handleCreateDoD = async (data) => {
     try {
       await dodService.createDoD(data.title, data.description, parseInt(id));
       setDodDialogOpen(false);
       dodForm.reset();
       fetchProjectData();
+      setError('');
     } catch (err) {
       setError('Failed to create DoD');
     }
   };
 
+  const handleEditDoD = async (data) => {
+    try {
+      await dodService.updateDoD(editingDod.id, data.title, data.description);
+      setEditDodDialogOpen(false);
+      setEditingDod(null);
+      editDodForm.reset();
+      fetchProjectData();
+      setError('');
+    } catch (err) {
+      setError('Failed to update DoD');
+    }
+  };
+
+  const handleDeleteDoD = async () => {
+    if (!deleteDodDialog.dod) return;
+
+    setDeletingDod(true);
+    try {
+      await dodService.deleteDoD(deleteDodDialog.dod.id);
+      setDeleteDodDialog({ open: false, dod: null });
+      fetchProjectData();
+      setError('');
+    } catch (err) {
+      setError('Failed to delete DoD');
+    } finally {
+      setDeletingDod(false);
+    }
+  };
+
+  // Item Management Functions
   const handleAddItem = async (data) => {
     try {
       await dodService.addDoDItem(
@@ -138,18 +191,55 @@ const ProjectDetail = () => {
       setSelectedDodId(null);
       itemForm.reset();
       fetchProjectData();
+      setError('');
     } catch (err) {
       setError('Failed to add DoD item');
     }
   };
 
+  const handleEditItem = async (data) => {
+    try {
+      await dodService.updateDoDItem(
+        editingItem.id,
+        data.title,
+        data.description,
+        data.isRequired,
+        data.order
+      );
+      setEditItemDialogOpen(false);
+      setEditingItem(null);
+      editItemForm.reset();
+      fetchProjectData();
+      setError('');
+    } catch (err) {
+      setError('Failed to update DoD item');
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    if (!deleteItemDialog.item) return;
+
+    setDeletingItem(true);
+    try {
+      await dodService.deleteDoDItem(deleteItemDialog.item.id);
+      setDeleteItemDialog({ open: false, item: null });
+      fetchProjectData();
+      setError('');
+    } catch (err) {
+      setError('Failed to delete DoD item');
+    } finally {
+      setDeletingItem(false);
+    }
+  };
+
+  // Participant Management Functions
   const handleAddParticipant = async (data) => {
     try {
       await projectService.addParticipant(id, data.email, data.role);
       setParticipantDialogOpen(false);
       participantForm.reset();
       fetchParticipants();
-      setError(''); // Clear any existing errors
+      setError('');
     } catch (err) {
       setError('Failed to add participant');
     }
@@ -163,7 +253,7 @@ const ProjectDetail = () => {
       await projectService.removeParticipant(id, deleteParticipantDialog.participant.id);
       setDeleteParticipantDialog({ open: false, participant: null });
       fetchParticipants();
-      setError(''); // Clear any existing errors
+      setError('');
     } catch (err) {
       setError('Failed to remove participant');
     } finally {
@@ -171,6 +261,43 @@ const ProjectDetail = () => {
     }
   };
 
+  // Menu Handlers
+  const handleDodMenuClick = (event, dodId) => {
+    setDodMenuAnchor({ ...dodMenuAnchor, [dodId]: event.currentTarget });
+  };
+
+  const handleDodMenuClose = (dodId) => {
+    setDodMenuAnchor({ ...dodMenuAnchor, [dodId]: null });
+  };
+
+  const handleItemMenuClick = (event, itemId) => {
+    setItemMenuAnchor({ ...itemMenuAnchor, [itemId]: event.currentTarget });
+  };
+
+  const handleItemMenuClose = (itemId) => {
+    setItemMenuAnchor({ ...itemMenuAnchor, [itemId]: null });
+  };
+
+  // Dialog Handlers
+  const openEditDodDialog = (dod) => {
+    setEditingDod(dod);
+    editDodForm.setValue('title', dod.title);
+    editDodForm.setValue('description', dod.description || '');
+    setEditDodDialogOpen(true);
+    handleDodMenuClose(dod.id);
+  };
+
+  const openEditItemDialog = (item) => {
+    setEditingItem(item);
+    editItemForm.setValue('title', item.title);
+    editItemForm.setValue('description', item.description || '');
+    editItemForm.setValue('isRequired', item.is_required);
+    editItemForm.setValue('order', item.order);
+    setEditItemDialogOpen(true);
+    handleItemMenuClose(item.id);
+  };
+
+  // Permission Functions
   const canManageParticipants = () => {
     return userRole === 'owner' || userRole === 'editor';
   };
@@ -180,10 +307,13 @@ const ProjectDetail = () => {
   };
 
   const canRemoveParticipant = (participant) => {
-    // Ne peut pas se supprimer soi-même ou supprimer le owner
     return canManageParticipants() && 
            participant.user?.id !== user?.id && 
            participant.role !== 'owner';
+  };
+
+  const canEditDoD = () => {
+    return userRole === 'owner' || userRole === 'editor';
   };
 
   const getRoleColor = (role) => {
@@ -253,7 +383,7 @@ const ProjectDetail = () => {
             <Typography variant="h5">
               Definition of Done ({dods.length})
             </Typography>
-            {(userRole === 'owner' || userRole === 'editor') && (
+            {canEditDoD() && (
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -274,7 +404,7 @@ const ProjectDetail = () => {
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
                   Create your first DoD to start defining completion criteria
                 </Typography>
-                {(userRole === 'owner' || userRole === 'editor') && (
+                {canEditDoD() && (
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
@@ -295,11 +425,41 @@ const ProjectDetail = () => {
                         <Typography variant="h6">
                           {dod.title}
                         </Typography>
-                        <Chip
-                          label={dod.is_active ? 'Active' : 'Inactive'}
-                          color={dod.is_active ? 'success' : 'default'}
-                          size="small"
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip
+                            label={dod.is_active ? 'Active' : 'Inactive'}
+                            color={dod.is_active ? 'success' : 'default'}
+                            size="small"
+                          />
+                          {canEditDoD() && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleDodMenuClick(e, dod.id)}
+                            >
+                              <MoreVertIcon />
+                            </IconButton>
+                          )}
+                          <Menu
+                            anchorEl={dodMenuAnchor[dod.id]}
+                            open={Boolean(dodMenuAnchor[dod.id])}
+                            onClose={() => handleDodMenuClose(dod.id)}
+                          >
+                            <MenuItem onClick={() => openEditDodDialog(dod)}>
+                              <EditIcon sx={{ mr: 1 }} fontSize="small" />
+                              Edit DoD
+                            </MenuItem>
+                            <MenuItem 
+                              onClick={() => {
+                                setDeleteDodDialog({ open: true, dod });
+                                handleDodMenuClose(dod.id);
+                              }}
+                              sx={{ color: 'error.main' }}
+                            >
+                              <DeleteIcon sx={{ mr: 1 }} fontSize="small" />
+                              Delete DoD
+                            </MenuItem>
+                          </Menu>
+                        </Box>
                       </Box>
 
                       {dod.description && (
@@ -327,6 +487,36 @@ const ProjectDetail = () => {
                                 primary={item.title}
                                 secondary={item.description}
                               />
+                              {canEditDoD() && (
+                                <ListItemSecondaryAction>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => handleItemMenuClick(e, item.id)}
+                                  >
+                                    <MoreVertIcon fontSize="small" />
+                                  </IconButton>
+                                  <Menu
+                                    anchorEl={itemMenuAnchor[item.id]}
+                                    open={Boolean(itemMenuAnchor[item.id])}
+                                    onClose={() => handleItemMenuClose(item.id)}
+                                  >
+                                    <MenuItem onClick={() => openEditItemDialog(item)}>
+                                      <EditIcon sx={{ mr: 1 }} fontSize="small" />
+                                      Edit
+                                    </MenuItem>
+                                    <MenuItem 
+                                      onClick={() => {
+                                        setDeleteItemDialog({ open: true, item });
+                                        handleItemMenuClose(item.id);
+                                      }}
+                                      sx={{ color: 'error.main' }}
+                                    >
+                                      <DeleteIcon sx={{ mr: 1 }} fontSize="small" />
+                                      Delete
+                                    </MenuItem>
+                                  </Menu>
+                                </ListItemSecondaryAction>
+                              )}
                             </ListItem>
                           ))}
                         </List>
@@ -342,7 +532,7 @@ const ProjectDetail = () => {
                     </CardContent>
 
                     <CardActions>
-                      {(userRole === 'owner' || userRole === 'editor') && (
+                      {canEditDoD() && (
                         <Button
                           size="small"
                           onClick={() => {
@@ -487,6 +677,63 @@ const ProjectDetail = () => {
         </form>
       </Dialog>
 
+      {/* Edit DoD Dialog */}
+      <Dialog open={editDodDialogOpen} onClose={() => setEditDodDialogOpen(false)} maxWidth="sm" fullWidth>
+        <form onSubmit={editDodForm.handleSubmit(handleEditDoD)}>
+          <DialogTitle>Edit Definition of Done</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Title"
+              margin="normal"
+              {...editDodForm.register('title', { required: 'Title is required' })}
+              error={!!editDodForm.formState.errors.title}
+              helperText={editDodForm.formState.errors.title?.message}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              margin="normal"
+              multiline
+              rows={3}
+              {...editDodForm.register('description')}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDodDialogOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="contained">Update</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Delete DoD Dialog */}
+      <Dialog
+        open={deleteDodDialog.open}
+        onClose={() => setDeleteDodDialog({ open: false, dod: null })}
+      >
+        <DialogTitle>Delete Definition of Done</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{deleteDodDialog.dod?.title}"? 
+            This will also delete all associated items and cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDodDialog({ open: false, dod: null })} disabled={deletingDod}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteDoD}
+            color="error"
+            variant="contained"
+            disabled={deletingDod}
+            startIcon={deletingDod ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deletingDod ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Add Item Dialog */}
       <Dialog open={itemDialogOpen} onClose={() => setItemDialogOpen(false)} maxWidth="sm" fullWidth>
         <form onSubmit={itemForm.handleSubmit(handleAddItem)}>
@@ -531,6 +778,75 @@ const ProjectDetail = () => {
             <Button type="submit" variant="contained">Add Item</Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={editItemDialogOpen} onClose={() => setEditItemDialogOpen(false)} maxWidth="sm" fullWidth>
+        <form onSubmit={editItemForm.handleSubmit(handleEditItem)}>
+          <DialogTitle>Edit DoD Item</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Title"
+              margin="normal"
+              {...editItemForm.register('title', { required: 'Title is required' })}
+              error={!!editItemForm.formState.errors.title}
+              helperText={editItemForm.formState.errors.title?.message}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              margin="normal"
+              multiline
+              rows={2}
+              {...editItemForm.register('description')}
+            />
+            <TextField
+              fullWidth
+              label="Order"
+              type="number"
+              margin="normal"
+              {...editItemForm.register('order', { valueAsNumber: true })}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox {...editItemForm.register('isRequired')} />
+              }
+              label="Required item"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditItemDialogOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="contained">Update</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Delete Item Dialog */}
+      <Dialog
+        open={deleteItemDialog.open}
+        onClose={() => setDeleteItemDialog({ open: false, item: null })}
+      >
+        <DialogTitle>Delete DoD Item</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{deleteItemDialog.item?.title}"?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteItemDialog({ open: false, item: null })} disabled={deletingItem}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteItem}
+            color="error"
+            variant="contained"
+            disabled={deletingItem}
+            startIcon={deletingItem ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deletingItem ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Add Participant Dialog */}

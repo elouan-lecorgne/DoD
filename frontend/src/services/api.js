@@ -74,7 +74,10 @@ export const projectService = {
 export const dodService = {
   createDoD: (title, description, projectId) =>
     api.post('/dods/', { title, description, project_id: projectId }),
-  
+  updateDoD: (dodId, title, description) =>                          // ← Nouvelle fonction
+    api.put(`/dods/${dodId}`, { title, description }),
+  deleteDoD: (dodId) =>                                              // ← Nouvelle fonction
+    api.delete(`/dods/${dodId}`),
   addDoDItem: (dodId, title, description, isRequired = true, order = 0) =>
     api.post(`/dods/${dodId}/items`, {
       title,
@@ -82,6 +85,15 @@ export const dodService = {
       is_required: isRequired,
       order,
     }),
+  updateDoDItem: (itemId, title, description, isRequired = true, order = 0) =>  // ← Nouvelle fonction
+    api.put(`/dods/items/${itemId}`, {  // Note: structure simplifiée pour l'API
+      title,
+      description,
+      is_required: isRequired,
+      order,
+    }),
+  deleteDoDItem: (itemId) =>                                         // ← Nouvelle fonction
+    api.delete(`/dods/items/${itemId}`), // Note: structure simplifiée pour l'API
 };
 
 export default api;

@@ -19,18 +19,10 @@ import SpeedIcon from '@mui/icons-material/Speed';
 const LandingPage = () => {
   const teamMembers = [
     {
-      name: '[Ton Nom]',
-      role: 'Full Stack Developer',
+      name: 'Elouan Lecorgne',
       avatar: '/api/placeholder/150/150',
       skills: ['Go', 'React', 'PostgreSQL', 'Docker']
     },
-    // Ajoute d'autres membres si applicable
-    // {
-    //   name: '[Nom Binôme]',
-    //   role: 'Full Stack Developer', 
-    //   avatar: '/api/placeholder/150/150',
-    //   skills: ['Go', 'React', 'Material-UI', 'CI/CD']
-    // }
   ];
 
   const features = [
