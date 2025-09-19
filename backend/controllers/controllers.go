@@ -632,27 +632,59 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		return
 	}
 
-	// AJOUTEZ CES LOGS
+	// LOGS DÉTAILLÉS
 	fmt.Printf("=== DELETE ITEM DEBUG ===\n")
 	fmt.Printf("DoD ID: %d, Item ID: %d\n", dodID, itemID)
+
+	// Vérifier d'abord si l'item existe, peu importe le DoD
+	var allItems []models.DoDItem
+	ctrl.DB.Find(&allItems)
+	fmt.Printf("All items in database:\n")
+	for _, item := range allItems {
+		fmt.Printf("  - Item ID: %d, DoD ID: %d, Title: %s\n", item.ID, item.DoDID, item.Title)
+	}
+
+	// Vérifier les items du DoD spécifique
+	var dodItems []models.DoDItem
+	ctrl.DB.Where("dod_id = ?", dodID).Find(&dodItems)
+	fmt.Printf("Items in DoD %d:\n", dodID)
+	for _, item := range dodItems {
+		fmt.Printf("  - Item ID: %d, Title: %s\n", item.ID, item.Title)
+	}
 
 	userID := c.GetUint("user_id")
 
 	// Vérifier que l'item existe et appartient au DoD
 	var item models.DoDItem
-	err = ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID).First(&item).Error
+	query := ctrl.DB.Where("id = ? AND dod_id = ?", itemID, dodID)
+	fmt.Printf("SQL Query: SELECT * FROM dod_items WHERE id = %d AND dod_id = %d\n", itemID, dodID)
+	
+	err = query.First(&item).Error
 	if err != nil {
-		fmt.Printf("Item not found: %v\n", err)
+		fmt.Printf("Item not found with WHERE clause: %v\n", err)
+		
+		// Essayer de trouver l'item par ID seulement
+		var itemByID models.DoDItem
+		err2 := ctrl.DB.Where("id = ?", itemID).First(&itemByID).Error
+		if err2 != nil {
+			fmt.Printf("Item with ID %d does not exist at all: %v\n", itemID, err2)
+		} else {
+			fmt.Printf("Item found by ID only: ID=%d, DoDID=%d, Title=%s\n", 
+				itemByID.ID, itemByID.DoDID, itemByID.Title)
+			fmt.Printf("Expected DoDID: %d, Actual DoDID: %d\n", dodID, itemByID.DoDID)
+		}
+		
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD item not found"})
 		return
 	}
 
-	fmt.Printf("Item found: %+v\n", item)
+	fmt.Printf("Item found: ID=%d, DoDID=%d, Title=%s\n", item.ID, item.DoDID, item.Title)
 
 	// Vérifier les permissions via le DoD
 	var dod models.DoD
 	err = ctrl.DB.First(&dod, dodID).Error
 	if err != nil {
+		fmt.Printf("DoD not found: %v\n", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "DoD not found"})
 		return
 	}
@@ -662,16 +694,20 @@ func (ctrl *Controller) DeleteDoDItem(c *gin.Context) {
 		dod.ProjectID, userID, []string{"owner", "editor"}).First(&participant).Error
 	
 	if err != nil {
+		fmt.Printf("Permission denied: %v\n", err)
 		c.JSON(http.StatusForbidden, gin.H{"error": "No permission to delete this DoD item"})
 		return
 	}
 
 	// Supprimer l'item
+	fmt.Printf("Deleting item with ID: %d\n", item.ID)
 	if err := ctrl.DB.Delete(&item).Error; err != nil {
+		fmt.Printf("Failed to delete item: %v\n", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete DoD item"})
 		return
 	}
 
+	fmt.Printf("Item deleted successfully\n")
 	c.JSON(http.StatusOK, gin.H{
 		"message": "DoD item deleted successfully",
 	})
